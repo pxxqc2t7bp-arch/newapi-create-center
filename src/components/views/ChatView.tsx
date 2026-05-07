@@ -16,6 +16,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { EditableValue, GlassSlider } from "@/components/ui/controls";
 
 export function ChatView() {
   const { showChatHistory, setShowChatHistory } = useOutletContext<{ showChatHistory: boolean, setShowChatHistory: (v: boolean | ((prev: boolean) => boolean)) => void }>();
@@ -34,6 +35,11 @@ export function ChatView() {
   const [showRightPanel, setShowRightPanel] = useState(true);
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const [temperature, setTemperature] = useState(70);
+  const [topP, setTopP] = useState(90);
+  const [frequencyPenalty, setFrequencyPenalty] = useState(0);
+  const [presencePenalty, setPresencePenalty] = useState(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -284,9 +290,9 @@ export function ChatView() {
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center group">
                   <span className="font-semibold text-slate-700 text-[13px] cursor-help" title="控制输出的随机性和创造性">Temperature</span>
-                  <span className="text-blue-600 font-medium text-xs bg-blue-50 px-1.5 py-0.5 rounded">0.7</span>
+                  <EditableValue value={temperature} onChange={setTemperature} min={0} max={100} />
                 </div>
-                <input type="range" className="accent-blue-500 w-full cursor-pointer" defaultValue="70" />
+                <GlassSlider value={temperature} onChange={setTemperature} min={0} max={100} colorClass="text-blue-500" />
                 <p className="text-[10px] text-slate-500 leading-tight">控制输出的随机性和创造性</p>
               </div>
 
@@ -294,9 +300,9 @@ export function ChatView() {
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center group">
                   <span className="font-semibold text-slate-700 text-[13px] cursor-help" title="核采样，控制词汇选择的多样性">Top P</span>
-                  <span className="text-blue-600 font-medium text-xs bg-blue-50 px-1.5 py-0.5 rounded">0.9</span>
+                  <EditableValue value={topP} onChange={setTopP} min={0} max={100} />
                 </div>
-                <input type="range" className="accent-blue-500 w-full cursor-pointer" defaultValue="90" />
+                <GlassSlider value={topP} onChange={setTopP} min={0} max={100} colorClass="text-blue-500" />
                 <p className="text-[10px] text-slate-500 leading-tight">核采样，控制词汇选择的多样性</p>
               </div>
 
@@ -304,9 +310,9 @@ export function ChatView() {
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center group">
                   <span className="font-semibold text-slate-700 text-[13px] cursor-help" title="频率惩罚，减少重复词汇的出现">Frequency Penalty</span>
-                  <span className="text-blue-600 font-medium text-xs bg-blue-50 px-1.5 py-0.5 rounded">0</span>
+                  <EditableValue value={frequencyPenalty} onChange={setFrequencyPenalty} min={-20} max={20} />
                 </div>
-                <input type="range" min="-20" max="20" className="accent-blue-500 w-full cursor-pointer" defaultValue="0" />
+                <GlassSlider value={frequencyPenalty} onChange={setFrequencyPenalty} min={-20} max={20} colorClass="text-blue-500" />
                 <p className="text-[10px] text-slate-500 leading-tight">频率惩罚，减少重复词汇的出现</p>
               </div>
 
@@ -314,9 +320,9 @@ export function ChatView() {
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center group">
                   <span className="font-semibold text-slate-700 text-[13px] cursor-help" title="存在惩罚，鼓励讨论新话题">Presence Penalty</span>
-                  <span className="text-blue-600 font-medium text-xs bg-blue-50 px-1.5 py-0.5 rounded">0</span>
+                  <EditableValue value={presencePenalty} onChange={setPresencePenalty} min={-20} max={20} />
                 </div>
-                <input type="range" min="-20" max="20" className="accent-blue-500 w-full cursor-pointer" defaultValue="0" />
+                <GlassSlider value={presencePenalty} onChange={setPresencePenalty} min={-20} max={20} colorClass="text-blue-500" />
                 <p className="text-[10px] text-slate-500 leading-tight">存在惩罚，鼓励讨论新话题</p>
               </div>
 
