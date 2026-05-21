@@ -29,6 +29,8 @@ import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { Crop as CropIcon } from 'lucide-react';
 import { EditableValue, GlassSlider } from "@/components/ui/controls";
+import { fetchModels, createGeneration, getTask, cancelTask } from "../../api/creation/services";
+import { CreationModel, modelSupportsTextToImage, modelSupportsImageToImage } from "../../types/creation/model";
 
 interface GeneratedImage {
   id: string;
@@ -596,6 +598,25 @@ export function ImageView() {
   const [prompt, setPrompt] = useState("");
   const [fullscreenImage, setFullscreenImage] = useState<GeneratedImage | null>(null);
   const [editingImage, setEditingImage] = useState<GeneratedImage | null>(null);
+  
+  // Model & Task state
+  const [models, setModels] = useState<CreationModel[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState<string>("");
+  const [generationType, setGenerationType] = useState<"text-to-image" | "image-to-image">("text-to-image");
+  const [sourceImageId, setSourceImageId] = useState<string>("");
+  const pollTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    fetchModels('image').then(data => {
+      setModels(data);
+      if (data.length > 0) setSelectedModelId(data[0].id);
+    }).catch(err => {
+      console.error(err);
+    });
+    return () => {
+      if (pollTimer.current) window.clearInterval(pollTimer.current);
+    };
+  }, []);
   const [images, setImages] = useState<GeneratedImage[]>([
     {
       id: "1",
@@ -684,22 +705,85 @@ export function ImageView() {
     { id: "2:3", label: "2:3", iconClass: "w-[14px] h-[24px]" },
   ];
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      toast.error("文生图必须填写画面描述");
+      return;
+    }
+    const model = models.find(m => m.id === selectedModelId);
+    if (!model) {
+      toast.error("未选择可用模型");
+      return;
+    }
+
+    if (generationType === 'text-to-image' && !modelSupportsTextToImage(model)) {
+      toast.error("当前模型不支持文生图，请切换支持的模型");
+      return;
+    }
+    if (generationType === 'image-to-image' && !modelSupportsImageToImage(model)) {
+      toast.error("当前模型不支持图生图，请切换支持的模型");
+      return;
+    }
+    if (generationType === 'image-to-image' && !sourceImageId) {
+      toast.error("图生图必须选择上传参考图像");
+      return;
+    }
+
     setIsGenerating(true);
-    // Simulate generation
-    setTimeout(() => {
+
+    try {
+      const task = await createGeneration({
+        modelId: selectedModelId,
+        prompt: prompt,
+        mode: generationType,
+        inputAssetIds: sourceImageId ? [sourceImageId] : []
+      });
+
+      const startTime = Date.now();
+      const MAX_WAIT = 2 * 60 * 1000; // 2 minutes
+
+      if (pollTimer.current) window.clearInterval(pollTimer.current);
+      pollTimer.current = window.setInterval(async () => {
+        try {
+          const statusResult = await getTask(task.id);
+          if (statusResult.status === 'succeeded') {
+            window.clearInterval(pollTimer.current!);
+            setIsGenerating(false);
+            const assetUrl = statusResult.resultAssets?.[0]?.url || 'https://via.placeholder.com/1024';
+            const newImage = {
+              id: Date.now().toString(),
+              url: assetUrl,
+              prompt: prompt,
+              ratio,
+              timestamp: new Date()
+            };
+            setImages((prev) => [newImage, ...prev]);
+            toast.success("生成成功");
+          } else if (statusResult.status === 'failed') {
+            window.clearInterval(pollTimer.current!);
+            setIsGenerating(false);
+            toast.error(statusResult.message || "任务生成失败");
+          } else if (statusResult.status === 'cancelled') {
+             window.clearInterval(pollTimer.current!);
+             setIsGenerating(false);
+             toast.error("任务由于某些原因已取消");
+          }
+          
+          if (Date.now() - startTime > MAX_WAIT) {
+             window.clearInterval(pollTimer.current!);
+             setIsGenerating(false);
+             toast.error("生成超时请重试");
+             cancelTask(task.id).catch(() => {});
+          }
+        } catch (e: any) {
+           window.clearInterval(pollTimer.current!);
+           setIsGenerating(false);
+           // Not to fallback to mock when it acts up
+        }
+      }, 3000);
+    } catch (e: any) {
       setIsGenerating(false);
-      const randomSeed = Math.floor(Math.random() * 10000);
-      const usedSeed = seed === -1 ? randomSeed : seed;
-      const newImage = {
-        id: Date.now().toString(),
-        url: `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt || "beautiful abstract digital art")}?width=1024&height=1024&nologo=true&seed=${usedSeed}`,
-        prompt: prompt || "beautiful abstract digital art",
-        ratio,
-        timestamp: new Date()
-      };
-      setImages((prev) => [newImage, ...prev]);
-    }, 2000);
+    }
   };
 
   return (
@@ -851,7 +935,7 @@ export function ImageView() {
             <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-inner ring-1 ring-primary/20">
               <Settings2 className="w-4.5 h-4.5" />
             </div>
-            <h2 className="font-bold text-slate-800 text-base tracking-tight">图像配置</h2>
+            <h2 className="font-bold text-slate-800 text-base tracking-tight">参数配置</h2>
           </div>
           <button 
             onClick={() => setShowRightPanel(false)}

@@ -10,13 +10,16 @@ import {
   Globe,
   Terminal,
   StopCircle,
-  FileText
+  FileText,
+  X
 } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { EditableValue, GlassSlider } from "@/components/ui/controls";
+import { fetchModels } from "../../api/creation/services";
+import { CreationModel, modelSupportsImageInputForChat } from "../../types/creation/model";
 
 export function ChatView() {
   const { showChatHistory, setShowChatHistory } = useOutletContext<{ showChatHistory: boolean, setShowChatHistory: (v: boolean | ((prev: boolean) => boolean)) => void }>();
@@ -35,6 +38,19 @@ export function ChatView() {
   const [showRightPanel, setShowRightPanel] = useState(true);
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [models, setModels] = useState<CreationModel[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState<string>("");
+  const [imagesAttached, setImagesAttached] = useState<string[]>([]);
+  const [showImageAttach, setShowImageAttach] = useState(false);
+
+  // Load models
+  useEffect(() => {
+    fetchModels('chat').then(data => {
+      setModels(data);
+      if (data.length > 0) setSelectedModelId(data[0].id);
+    }).catch(() => {});
+  }, []);
   
   const [temperature, setTemperature] = useState(70);
   const [topP, setTopP] = useState(90);
@@ -51,6 +67,15 @@ export function ChatView() {
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
+
+    if (imagesAttached.length > 0 || showImageAttach) {
+      const model = models.find(m => m.id === selectedModelId);
+      if (model && !modelSupportsImageInputForChat(model)) {
+        toast.error("当前模型不支持图片输入，请切换支持多模态的模型");
+        return;
+      }
+    }
+
     setMessages((prev) => [...prev, { role: "user", content: inputValue }]);
     setInputValue("");
     
@@ -232,7 +257,7 @@ export function ChatView() {
                 <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center">
                   <Settings2 className="w-4 h-4" />
                 </div>
-                <h2 className="font-semibold text-slate-800 text-sm">参数微调</h2>
+                <h2 className="font-semibold text-slate-800 text-sm">参数配置</h2>
               </div>
             </div>
           </div>
@@ -246,23 +271,32 @@ export function ChatView() {
                   <span className="font-bold text-slate-800 text-[15px]">图片地址</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-10 h-6 bg-slate-100 border border-slate-200 rounded-full relative cursor-pointer">
-                    <div className="absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow-sm border border-slate-200/50" />
+                  <div 
+                    className="w-10 h-6 bg-slate-100 border border-slate-200 rounded-full relative cursor-pointer"
+                    onClick={() => setShowImageAttach(!showImageAttach)}
+                  >
+                    <div className={cn("absolute top-[3px] w-4 h-4 rounded-full shadow-sm border border-slate-200/50 transition-all", showImageAttach ? "bg-blue-500 left-[18px]" : "bg-white left-[3px]")} />
                   </div>
-                  <button className="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-slate-200 transition-colors border border-slate-200/50">
+                  <button onClick={() => setImagesAttached(prev => [...prev, ""])} className="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-slate-200 transition-colors border border-slate-200/50">
                     <span className="text-[16px] leading-[0] font-light mt-[-1px]">+</span>
                   </button>
                 </div>
               </div>
               <p className="text-[13px] text-slate-600">启用后可添加图片URL进行多模态对话</p>
               
-              <div className="flex items-center gap-2 bg-[#f9fafb] border border-slate-100 rounded-2xl px-3 py-2 shadow-sm">
-                  <FileText className="w-4 h-4 text-slate-300 flex-shrink-0" />
-                  <input type="text" className="flex-1 bg-transparent border-none focus:ring-0 outline-none text-[13px] text-slate-400 placeholder-slate-300 font-mono" placeholder="https://example.com/image1.jpg" defaultValue="https://example.com/image1.jpg" />
-                  <button className="text-slate-300 hover:text-slate-500 flex-shrink-0 p-0.5">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-              </div>
+              {showImageAttach && imagesAttached.map((imgUrl, i) => (
+                <div key={i} className="flex items-center gap-2 bg-[#f9fafb] border border-slate-100 rounded-2xl px-3 py-2 shadow-sm mt-1">
+                    <FileText className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                    <input type="text" value={imgUrl} onChange={e => {
+                        const next = [...imagesAttached];
+                        next[i] = e.target.value;
+                        setImagesAttached(next);
+                    }} className="flex-1 bg-transparent border-none focus:ring-0 outline-none text-[13px] text-slate-400 placeholder-slate-300 font-mono" placeholder="https://example.com/image1.jpg" />
+                    <button onClick={() => setImagesAttached(prev => prev.filter((_, idx) => idx !== i))} className="text-slate-300 hover:text-slate-500 flex-shrink-0 p-0.5" type="button">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+              ))}
             </div>
 
             {/* Model Select */}
