@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useOutletContext } from "react-router-dom";
+import { useLocation, useOutletContext } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
@@ -588,6 +588,7 @@ function FullscreenOverlay({
 }
 
 export function ImageView() {
+  const location = useLocation();
   const { showChatHistory, setShowChatHistory } = useOutletContext<{ showChatHistory: boolean, setShowChatHistory: (v: boolean | ((prev: boolean) => boolean)) => void }>();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(true);
@@ -595,7 +596,7 @@ export function ImageView() {
   const [steps, setSteps] = useState(20);
   const [seed, setSeed] = useState(-1);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(location.state?.initialPrompt || "");
   const [fullscreenImage, setFullscreenImage] = useState<GeneratedImage | null>(null);
   const [editingImage, setEditingImage] = useState<GeneratedImage | null>(null);
   

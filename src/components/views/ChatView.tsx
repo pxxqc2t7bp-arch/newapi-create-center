@@ -14,7 +14,7 @@ import {
   X
 } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useLocation, useOutletContext } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { EditableValue, GlassSlider } from "@/components/ui/controls";
@@ -22,6 +22,7 @@ import { fetchModels } from "../../api/creation/services";
 import { CreationModel, modelSupportsImageInputForChat } from "../../types/creation/model";
 
 export function ChatView() {
+  const location = useLocation();
   const { showChatHistory, setShowChatHistory } = useOutletContext<{ showChatHistory: boolean, setShowChatHistory: (v: boolean | ((prev: boolean) => boolean)) => void }>();
   const [messages, setMessages] = useState([
     {
@@ -36,7 +37,7 @@ export function ChatView() {
     },
   ]);
   const [showRightPanel, setShowRightPanel] = useState(true);
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(location.state?.initialPrompt || "");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [models, setModels] = useState<CreationModel[]>([]);

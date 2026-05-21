@@ -15,6 +15,7 @@ import {
   Play
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import TimelineComponent from "./TimelineComponent";
 import { fetchModels, createGeneration, getTask, cancelTask } from "../../api/creation/services";
@@ -24,6 +25,7 @@ import { toast } from "sonner";
 type PreviewState = "empty" | "generating" | "completed";
 
 export function VideoView() {
+  const location = useLocation();
   const [showRightPanel, setShowRightPanel] = useState(true);
   const [previewState, setPreviewState] = useState<PreviewState>("empty");
   const [generationProgress, setGenerationProgress] = useState(0);
@@ -65,7 +67,7 @@ export function VideoView() {
   const [aClip, setAClip] = useState({ id: 'a1', start: 0, duration: 5, sourceStart: 0, maxDuration: 5, name: 'Original_Audio', type: 'audio' as const });
   const initialVClip = useRef(vClip);
   
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(location.state?.initialPrompt || "");
   const [models, setModels] = useState<CreationModel[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string>("");
   const [sourceImageId, setSourceImageId] = useState<string>("");

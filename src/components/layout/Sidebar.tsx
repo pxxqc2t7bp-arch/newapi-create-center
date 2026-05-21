@@ -13,10 +13,11 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 const mainNavItems = [
-  { name: "AI 聊天", icon: MessageSquare, path: "/chat" },
-  { name: "AI 生图", icon: ImageIcon, path: "/image" },
-  { name: "AI 视频", icon: Film, path: "/video" },
-  { name: "素材广场", icon: LayoutGrid, path: "/assets" },
+  { name: "AI 聊天", icon: MessageSquare, path: "/creation/chat" },
+  { name: "AI 生图", icon: ImageIcon, path: "/creation/image" },
+  { name: "AI 视频", icon: Film, path: "/creation/video" },
+  { name: "素材广场", icon: LayoutGrid, path: "/creation/assets" },
+  { name: "提示词库", icon: MessageSquare, path: "/creation/prompts" }, // Reusing MessageSquare as a placeholder for prompts
 ];
 
 const historyItems = [
